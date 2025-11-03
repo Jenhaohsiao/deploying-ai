@@ -11,6 +11,8 @@ import json
 import requests
 from utils.logger import get_logger
 import os
+import chromadb
+from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
 
 _logs = get_logger(__name__)
 
@@ -21,6 +23,54 @@ load_dotenv(src_dir / ".secrets")
 client = OpenAI()
 
 open_ai_model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+
+# ChromaDB settings
+CHROMA_URL = "http://localhost:8000"
+COLLECTION_NAME = "pitchfork_music_reviews"
+
+# Initialize ChromaDB client
+try:
+    chroma_client = chromadb.HttpClient(host=CHROMA_URL)
+    music_collection = chroma_client.get_collection(
+        name=COLLECTION_NAME,
+        embedding_function=OpenAIEmbeddingFunction(
+            api_key=os.getenv("OPENAI_API_KEY"),
+            model_name="text-embedding-3-small"
+        )
+    )
+    _logs.info(f"Connected to ChromaDB collection: {COLLECTION_NAME}")
+except Exception as e:
+    _logs.error(f"Failed to connect to ChromaDB: {e}")
+    music_collection = None
+
+# Token limit constant
+MAX_INPUT_TOKENS = 200
+
+def estimate_tokens(text: str) -> int:
+    """
+    Estimate the number of tokens in a text string.
+    Uses a simple heuristic: roughly 1 token per 4 characters for English,
+    and 1 token per 1.5-2 characters for Chinese/Japanese.
+    This is a conservative estimate without requiring additional packages.
+    
+    Args:
+        text: The text to estimate tokens for
+        
+    Returns:
+        Estimated number of tokens
+    """
+    if not text:
+        return 0
+    
+    # Count ASCII and non-ASCII characters separately
+    ascii_chars = sum(1 for c in text if ord(c) < 128)
+    non_ascii_chars = len(text) - ascii_chars
+    
+    # Estimate: ~4 chars per token for English, ~1.5 chars per token for CJK
+    # Being conservative (overestimating) to avoid hitting actual limits
+    estimated_tokens = (ascii_chars / 3.5) + (non_ascii_chars / 1.3)
+    
+    return int(estimated_tokens)
 
 # Define tools for the OpenAI API
 tools = [
@@ -59,6 +109,27 @@ tools = [
                 }
             },
             "required": ["lat", "lon"],
+            "additionalProperties": False
+        },
+    },
+    {
+        "type": "function",
+        "name": "search_music",
+        "description": "Searches the Pitchfork music reviews database for album recommendations based on a query. Use this for music-related questions, genre recommendations, artist searches, or mood-based music suggestions.",
+        "strict": True,
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "The search query describing the type of music, genre, mood, or artist the user is looking for (e.g., 'indie rock', 'sad rainy day music', 'upbeat summer songs')",
+                },
+                "n_results": {
+                    "type": "integer",
+                    "description": "Number of album recommendations to return (default: 3, max: 5)",
+                }
+            },
+            "required": ["query", "n_results"],
             "additionalProperties": False
         },
     },
@@ -218,6 +289,72 @@ def get_weather(lat: float, lon: float) -> dict:
         }
 
 
+def search_music(query: str, n_results: int = 3) -> dict:
+    """
+    Search the Pitchfork music reviews database for album recommendations.
+    
+    Args:
+        query: Search query describing the music (genre, mood, artist, etc.)
+        n_results: Number of results to return (default: 3, max: 5)
+        
+    Returns:
+        Dictionary containing music recommendations with album details
+    """
+    _logs.info(f"Searching music with query: '{query}', n_results: {n_results}")
+    
+    if music_collection is None:
+        _logs.error("Music collection not available")
+        return {
+            "error": "Music recommendation service is currently unavailable"
+        }
+    
+    try:
+        # Limit results to reasonable number
+        n_results = min(max(1, n_results), 5)
+        
+        # Query the ChromaDB collection
+        results = music_collection.query(
+            query_texts=[query],
+            n_results=n_results
+        )
+        
+        if not results['documents'] or not results['documents'][0]:
+            return {
+                "message": "No music recommendations found for your query",
+                "recommendations": []
+            }
+        
+        # Format the results
+        recommendations = []
+        for i in range(len(results['documents'][0])):
+            metadata = results['metadatas'][0][i]
+            document = results['documents'][0][i]
+            
+            # Create a recommendation entry
+            recommendation = {
+                "artist": metadata.get('artist', 'Unknown Artist'),
+                "album": metadata.get('title', 'Unknown Album'),
+                "score": metadata.get('score', 0),
+                "year": metadata.get('year', 0),
+                "review_excerpt": document[:300] + "..." if len(document) > 300 else document
+            }
+            recommendations.append(recommendation)
+        
+        _logs.info(f"Found {len(recommendations)} music recommendations")
+        return {
+            "query": query,
+            "count": len(recommendations),
+            "recommendations": recommendations
+        }
+        
+    except Exception as e:
+        _logs.error(f"Error searching music: {e}")
+        return {
+            "error": f"Failed to search music database: {str(e)}"
+        }
+
+
+
 def sanitize_history(history: list[dict]) -> list[dict]:
     """Remove tool-related fields from history for cleaner conversation context"""
     clean_history = []
@@ -241,6 +378,15 @@ def assignment_chat(message: str, history: list[dict] = []) -> str:
         Assistant's response text
     """
     _logs.info(f'User message: {message}')
+    
+    # Check estimated token count of user input
+    estimated_tokens = estimate_tokens(message)
+    _logs.info(f'User message estimated token count: {estimated_tokens}')
+    
+    if estimated_tokens > MAX_INPUT_TOKENS:
+        _logs.warning(f'User message exceeds token limit: {estimated_tokens} > {MAX_INPUT_TOKENS}')
+        # Return a friendly reminder that works across languages
+        return f"⚠️ Your message is too long (estimated ~{estimated_tokens} tokens). Please keep your message under {MAX_INPUT_TOKENS} tokens. Try asking about one location at a time with a shorter message."
     
     instructions = return_instructions_root()
     
@@ -281,6 +427,8 @@ def assignment_chat(message: str, history: list[dict] = []) -> str:
                     result = get_coordinates(**args)
                 elif item.name == "get_weather":
                     result = get_weather(**args)
+                elif item.name == "search_music":
+                    result = search_music(**args)
                 else:
                     result = {"error": f"Unknown function: {item.name}"}
                 

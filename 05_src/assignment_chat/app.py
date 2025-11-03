@@ -20,10 +20,10 @@ load_dotenv(src_dir / ".secrets")
 chat = gr.ChatInterface(
     fn=assignment_chat,
     type="messages",
-    title="🌤️ Weather Assistant",
-    description="Ask me about the weather in any city around the world!"
+    title="� Radio DJ - Weather & Music",
+    description="Your friendly radio DJ! Ask me about weather forecasts or get music recommendations from Pitchfork reviews. I can even suggest music that matches the weather mood!"
 )
 
 if __name__ == "__main__":
-    _logs.info('Starting Weather Chat App...')
+    _logs.info('Starting Radio DJ Chat App...')
     chat.launch()
