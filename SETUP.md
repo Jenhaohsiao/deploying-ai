@@ -19,15 +19,26 @@ Open a terminal (macOS/Linux) or Git Bash (Windows) in this repo, and run the fo
     uv venv deploying-ai-env --python 3.11
     ```
 
+
 2. Activate the environment:
     - for macOS/Linux:
         ```
         source deploying-ai-env/bin/activate
         ```
         
-    - for windows (git bash):    
+    - for Windows (Git Bash):    
         ```
         source deploying-ai-env/Scripts/activate
+        ```
+    
+    - for Windows (PowerShell):
+        ```
+        .\deploying-ai-env\Scripts\Activate.ps1
+        ```
+    
+    - for Windows (CMD):
+        ```
+        .\deploying-ai-env\Scripts\activate.bat
         ```
 
 3. Install all required packages from the [pyproject.toml](./pyproject.toml)
@@ -48,9 +59,19 @@ In order to run any code in this repo, you must first activate its environment.
     source deploying-ai-env/bin/activate
     ```
     
-- for windows (git bash):    
+- for Windows (Git Bash):    
     ```
     source deploying-ai-env/Scripts/activate
+    ```
+
+- for Windows (PowerShell):
+    ```
+    .\deploying-ai-env\Scripts\Activate.ps1
+    ```
+
+- for Windows (CMD):
+    ```
+    .\deploying-ai-env\Scripts\activate.bat
     ```
 
 When the environment is active, your terminal prompt will change to show:  
