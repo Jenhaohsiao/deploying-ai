@@ -1,34 +1,271 @@
 # LLM Compiler 中文詳解 - 給初學者的完整指南
 
 ## 📚 目錄
-1. [什麼是 LLM Compiler?](#什麼是-llm-compiler)
-2. [為什麼需要它?](#為什麼需要它)
-3. [核心概念解釋](#核心概念解釋)
-4. [三大組件詳解](#三大組件詳解)
-5. [完整代碼範例](#完整代碼範例)
-6. [實際應用場景](#實際應用場景)
-7. [常見問題解答](#常見問題解答)
+1. [什麼是 MCP?](#什麼是-mcp)
+2. [什麼是 LLM Compiler?](#什麼是-llm-compiler)
+3. [為什麼需要它?](#為什麼需要它)
+4. [核心概念解釋](#核心概念解釋)
+5. [三大組件詳解](#三大組件詳解)
+6. [完整代碼範例](#完整代碼範例)
+7. [實際應用場景](#實際應用場景)
+8. [常見問題解答](#常見問題解答)
+
+---
+
+## 什麼是 MCP?
+
+### MCP 基礎概念
+
+**MCP (Model Context Protocol)** 是一個標準化的協定,讓 AI 應用程式能夠安全地連接到外部資料來源和工具。
+
+### 日常生活比喻
+想像 MCP 就像是「萬用插頭轉接器」:
+- **傳統做法**: 每個國家的插座不同,你需要為每個國家準備不同的插頭
+- **使用 MCP**: 有了標準化的轉接器,一個插頭就能在任何地方使用
+
+同樣地,MCP 讓 AI 模型能夠用統一的方式連接到各種不同的服務和工具。
+
+### MCP 的三個關鍵角色
+
+#### 1. MCP Host (主機)
+- **角色**: 協調和管理一個或多個 MCP 客戶端的 AI 應用程式
+- **比喻**: 就像是一個總經理,負責管理和協調所有的工作
+- **例子**: VS Code、Claude Desktop、OpenAI API
+
+#### 2. MCP Client (客戶端)
+- **角色**: 維持與 MCP 伺服器的連接,並為 MCP 主機獲取上下文資訊
+- **比喻**: 就像是一個中間人或傳令員,負責傳遞訊息
+- **功能**: 它是主機和伺服器之間的橋樑
+
+#### 3. MCP Server (伺服器)
+- **角色**: 向 MCP 客戶端提供上下文資訊和工具的程式
+- **比喻**: 就像是一個專門的服務提供商,例如天氣服務、資料庫查詢服務
+- **例子**: 天氣查詢伺服器、檔案管理伺服器、數學計算服務
+
+### MCP 運作流程圖
+
+```
+┌─────────────────┐
+│   MCP Host      │  例如: VS Code、OpenAI API
+│   (總經理)      │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│   MCP Client    │  負責連接和通訊
+│   (傳令員)      │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│   MCP Server    │  提供工具和資料
+│  (服務提供商)   │  例如: 搜尋、計算、查詢
+└─────────────────┘
+```
+
+### 實際範例: 天氣查詢
+
+當你問 AI「舊金山現在的天氣如何?」時:
+
+1. **MCP Host (AI 應用)**: 收到用戶問題
+2. **MCP Client**: 識別需要天氣資訊,連接到天氣 MCP 伺服器
+3. **MCP Server**: 查詢天氣 API,返回結果
+4. **MCP Client**: 將結果傳回給 Host
+5. **MCP Host**: 整合資訊,生成回答給用戶
+
+### 為什麼 MCP 很重要?
+
+**1. 標準化**
+- 不需要為每個工具寫專門的整合代碼
+- 一次實作,到處使用
+
+**2. 安全性**
+- 統一的安全協定
+- 可控制的權限管理
+
+**3. 擴展性**
+- 輕鬆添加新工具和服務
+- 支援多個伺服器同時運作
+
+**4. 靈活性**
+- AI 可以動態選擇需要的工具
+- 支援複雜的工作流程
+
+### MCP 與 LLM Compiler 的關係
+
+在本教程中:
+- **MCP Server** 提供各種工具(如搜尋、數學計算)
+- **LLM Compiler** 智能地規劃如何使用這些工具
+- 兩者結合,創造出強大且高效的 AI 代理系統
 
 ---
 
 ## 什麼是 LLM Compiler?
 
+### 基本概念
+
+**LLM Compiler** 是一個創新的 AI 代理(Agent)架構,專門設計用來提升 AI 執行複雜任務的效率和速度。
+
+### 名詞解釋
+
+#### 什麼是「Compiler」(編譯器)?
+
+在電腦科學中,**編譯器**是一個將高階程式碼轉換成機器可執行指令的程式。它的特點是:
+1. **分析整個程式**:一次性查看所有代碼
+2. **優化執行順序**:重新排列指令以提高效率
+3. **識別依賴關係**:確定哪些操作必須按順序執行,哪些可以並行
+
+**LLM Compiler 借用了這個概念**:
+- 不是逐步執行任務(像解釋器)
+- 而是先分析整個問題,制定最優執行計劃
+- 然後平行處理獨立的任務
+
 ### 簡單比喻
+
 想像你要辦一場派對,需要做很多事情:
 - 買食材
 - 準備場地
 - 邀請朋友
 - 準備音樂
 
-**傳統做法**(一般 AI 代理):你一件一件做,做完一件才做下一件。
+**傳統 AI 代理(順序執行,像解釋器)**:
+```
+步驟 1: 買食材 (1小時)
+步驟 2: 準備場地 (1小時)  
+步驟 3: 邀請朋友 (30分鐘)
+步驟 4: 準備音樂 (30分鐘)
+總時間: 3小時
+```
+- 一件一件做,做完一件才做下一件
+- 每做完一件事,還要思考「接下來該做什麼?」
+- 效率低,浪費時間
 
-**LLM Compiler 做法**:聰明地分析哪些事可以同時進行(買食材和邀請朋友可以同時做),哪些必須等待(準備場地要先於佈置),然後平行處理,大幅縮短時間!
+**LLM Compiler(智能規劃和並行執行)**:
+```
+規劃階段:分析所有任務和依賴關係
+執行階段:
+  並行組 1: 買食材 + 邀請朋友 (同時進行,1小時)
+  並行組 2: 準備場地 + 準備音樂 (同時進行,1小時)
+總時間: 2小時
+```
+- 先分析哪些事可以同時進行
+- 識別哪些任務必須按順序(如先準備場地才能佈置)
+- 平行處理獨立任務,大幅縮短時間!
 
 ### 正式定義
-LLM Compiler 是一個由 Kim 等人在 2023 年提出的 AI 代理架構,主要特點是:
-1. **加速執行**:通過並行處理任務來提升速度
-2. **節省成本**:減少不必要的 LLM 調用次數
-3. **智能排程**:使用 DAG(有向無環圖)來管理任務依賴關係
+
+LLM Compiler 是由 **Kim 等人在 2023 年**發表的 AI 代理架構(論文:[An LLM Compiler for Parallel Function Calling](https://arxiv.org/abs/2312.04511)),其核心創新包括:
+
+#### 1. 加速執行 (Speed Optimization)
+- **並行處理**:同時執行多個獨立的任務
+- **提前調度**:不等待前一個任務完成就開始準備下一個
+- **效率提升**:在某些場景下可節省 40-50% 的執行時間
+
+#### 2. 節省成本 (Cost Reduction)
+- **減少 LLM 調用**:一次性規劃所有步驟,而不是每步都問 LLM「下一步做什麼?」
+- **智能緩存**:避免重複執行相同的任務
+- **經濟效益**:每次 LLM 調用都要花錢,減少調用次數可顯著降低成本
+
+#### 3. 智能排程 (Intelligent Scheduling)
+- **DAG 管理**:使用有向無環圖(Directed Acyclic Graph)表示任務依賴關係
+- **依賴解析**:自動識別任務之間的依賴,確保執行順序正確
+- **動態調整**:如果某個任務失敗,可以重新規劃剩餘步驟
+
+### LLM Compiler vs 傳統 AI 代理
+
+| 特性 | 傳統 AI 代理 | LLM Compiler |
+|------|-------------|--------------|
+| **執行方式** | 順序執行(Sequential) | 並行執行(Parallel) |
+| **規劃策略** | 逐步決定(每次只看下一步) | 一次性規劃(看整個任務) |
+| **LLM 調用** | 頻繁(每步都調用) | 較少(主要用於規劃) |
+| **速度** | 較慢 | 快速(2-3倍提升) |
+| **成本** | 較高 | 較低 |
+| **適用場景** | 簡單單步驟任務 | 複雜多步驟任務 |
+
+### 工作原理概述
+
+```
+用戶問題: "舊金山和紐約的溫度總和是多少?"
+
+┌─────────────────────────────────────────┐
+│ 傳統 AI 代理                              │
+├─────────────────────────────────────────┤
+│ 1. LLM: "我需要查舊金山溫度"              │
+│ 2. 執行: search("SF temp") → 15°C       │
+│ 3. LLM: "接下來查紐約溫度"                │
+│ 4. 執行: search("NY temp") → 10°C       │
+│ 5. LLM: "現在計算總和"                    │
+│ 6. 執行: math("15 + 10") → 25°C         │
+│ 總 LLM 調用: 3次                         │
+│ 總時間: ~6-8秒                            │
+└─────────────────────────────────────────┘
+
+┌─────────────────────────────────────────┐
+│ LLM Compiler                             │
+├─────────────────────────────────────────┤
+│ 1. LLM: "規劃完整任務流程"                │
+│    → Task 1: search("SF temp")          │
+│    → Task 2: search("NY temp")          │
+│    → Task 3: math("${1} + ${2}")        │
+│                                          │
+│ 2. 執行階段:                              │
+│    並行: Task 1 + Task 2 (同時進行)      │
+│    等待: Task 3 (依賴 1 和 2)            │
+│                                          │
+│ 總 LLM 調用: 1次(規劃) + 1次(驗證)       │
+│ 總時間: ~3-4秒                            │
+└─────────────────────────────────────────┘
+```
+
+### 核心優勢總結
+
+**1. 時間效率 (Time Efficiency)**
+- 通過並行執行,可將執行時間縮短 40-50%
+- 特別適合需要多次 API 調用的任務
+
+**2. 經濟效益 (Cost Efficiency)**
+- 減少 LLM 調用次數,降低 API 成本
+- 在大規模應用中可節省顯著費用
+
+**3. 可靠性 (Reliability)**
+- 清晰的依賴管理,減少執行錯誤
+- 支援任務失敗後的重新規劃
+
+**4. 可擴展性 (Scalability)**
+- 易於添加新工具和功能
+- 支援複雜的多步驟工作流程
+
+### 實際應用範例
+
+#### 範例 1: 數據分析任務
+```
+問題: "比較蘋果和微軟過去一年的股價表現"
+
+LLM Compiler 規劃:
+1. get_stock_data("AAPL", "1y")  # 可並行
+2. get_stock_data("MSFT", "1y")  # 可並行
+3. calculate_performance("${1}")  # 依賴任務1
+4. calculate_performance("${2}")  # 依賴任務2
+5. compare("${3}", "${4}")        # 依賴任務3和4
+
+執行時間: ~5秒 (vs 傳統方法的 ~12秒)
+```
+
+#### 範例 2: 多城市資訊查詢
+```
+問題: "東京、倫敦、紐約的天氣和當地時間"
+
+LLM Compiler 規劃:
+1. weather("Tokyo")    # 三個任務可並行
+2. weather("London")   #
+3. weather("NYC")      #
+4. time("Tokyo")       # 三個任務可並行
+5. time("London")      #
+6. time("NYC")         #
+7. format_results("${1-6}")  # 依賴所有前面的任務
+
+執行時間: ~3秒 (vs 傳統方法的 ~15秒)
+```
 
 ---
 
@@ -61,7 +298,271 @@ LLM Compiler 是一個由 Kim 等人在 2023 年提出的 AI 代理架構,主要
 
 ## 核心概念解釋
 
-### 1. DAG (有向無環圖) - Directed Acyclic Graph
+### 0. LangGraph 基礎
+
+在深入 LLM Compiler 之前,我們需要先理解 **LangGraph** - 這是構建 LLM Compiler 的底層框架。
+
+#### 什麼是 LangGraph?
+
+**簡單定義**: LangGraph 是一個用於構建有狀態、多步驟 AI 應用的框架。
+
+**日常比喻**:
+- 想像一個工作流程圖,每個節點是一個步驟
+- LangGraph 讓你定義這些步驟和它們之間的連接
+- 就像組裝樂高積木,每個積木是一個功能單元
+
+#### LangGraph 的關鍵組件
+
+**1. 節點 (Nodes)**
+- 代表一個具體的操作或功能
+- 例如: "規劃任務"、"執行搜索"、"生成答案"
+
+```python
+# 定義一個節點
+def plan_and_schedule(state):
+    # 執行規劃邏輯
+    return {"messages": new_messages}
+```
+
+**2. 邊 (Edges)**
+- 連接節點,定義執行流程
+- 兩種類型:
+  - **普通邊**: 總是執行 A → B
+  - **條件邊**: 根據條件決定走哪條路
+
+```python
+# 普通邊: START → plan
+graph.add_edge(START, "plan_and_schedule")
+
+# 條件邊: 根據結果決定下一步
+graph.add_conditional_edges("join", should_continue)
+```
+
+**3. 狀態 (State)**
+- 儲存整個流程中的信息
+- 在各個節點間共享和更新
+
+```python
+class State(TypedDict):
+    messages: list  # 對話歷史
+    tasks: list     # 待執行任務
+    observations: dict  # 已完成任務的結果
+```
+
+#### LangGraph 執行流程示例
+
+```python
+# 創建圖
+graph = StateGraph(State)
+
+# 添加節點
+graph.add_node("規劃", planner)
+graph.add_node("執行", executor)
+graph.add_node("回答", answerer)
+
+# 定義流程
+graph.add_edge(START, "規劃")
+graph.add_edge("規劃", "執行")
+graph.add_edge("執行", "回答")
+graph.add_edge("回答", END)
+
+# 執行
+chain = graph.compile()
+result = chain.invoke({"messages": [user_question]})
+```
+
+**流程圖**:
+```
+START → 規劃 → 執行 → 回答 → END
+```
+
+#### 為什麼需要 LangGraph?
+
+**1. 狀態管理**
+- 自動處理信息在各步驟間的傳遞
+- 不用手動管理複雜的變量
+
+**2. 靈活控制流**
+- 可以循環、分支、重試
+- 支援複雜的業務邏輯
+
+**3. 可視化和調試**
+- 清晰的流程圖
+- 容易找出問題所在
+
+**4. 可組合性**
+- 小節點可以組合成大系統
+- 可重用的組件
+
+#### LangGraph vs 傳統方法
+
+**傳統方法 (Sequential)**:
+```python
+result1 = step1()
+result2 = step2(result1)
+result3 = step3(result2)
+# 難以處理條件分支和循環
+```
+
+**LangGraph 方法**:
+```python
+# 定義流程圖,自動處理狀態傳遞
+graph.add_edge("step1", "step2")
+graph.add_conditional_edges("step2", decide_next)
+# 清晰、靈活、易維護
+```
+
+#### 與 LLM Compiler 的關係
+
+LLM Compiler 使用 LangGraph 來:
+1. **組織三大組件**: Planner、Task Fetcher、Joiner 都是 LangGraph 的節點
+2. **管理工作流**: 使用條件邊實現重規劃邏輯
+3. **維護狀態**: 追蹤任務進度和結果
+
+### 1. 工具 (Tools) 詳解
+
+#### 什麼是工具?
+
+**定義**: 工具是 AI 可以調用的外部函數或服務。
+
+**為什麼需要工具?**
+- LLM 本身只能生成文本
+- 無法執行實際操作(搜索、計算、查詢數據庫等)
+- 工具讓 LLM 能夠"做事",而不只是"說話"
+
+#### 工具的組成部分
+
+**1. 工具名稱**
+```python
+name = "tavily_search"
+```
+
+**2. 工具描述**
+```python
+description = "搜索引擎工具,用於查找即時信息"
+```
+- LLM 根據描述決定何時使用這個工具
+
+**3. 輸入參數 (Schema)**
+```python
+class SearchInput(BaseModel):
+    query: str  # 搜索查詢
+    max_results: int = 5  # 最多返回幾個結果
+```
+
+**4. 執行函數**
+```python
+def _run(self, query: str, max_results: int = 5):
+    # 實際執行搜索
+    results = search_api.search(query, max_results)
+    return results
+```
+
+#### 工具調用流程
+
+```
+1. 用戶問題: "舊金山的天氣如何?"
+   ↓
+2. LLM 分析: "需要搜索最新天氣信息"
+   ↓
+3. LLM 生成工具調用:
+   {
+     "tool": "tavily_search",
+     "args": {"query": "San Francisco weather"}
+   }
+   ↓
+4. 系統執行工具
+   ↓
+5. 返回結果: "舊金山: 15°C, 多雲"
+   ↓
+6. LLM 整合結果生成回答
+```
+
+#### 常見工具類型
+
+**1. 搜索工具**
+```python
+from langchain_tavily import TavilySearch
+
+search = TavilySearch(
+    max_results=1,
+    description="搜索引擎,用於查找最新信息"
+)
+```
+
+**2. 計算工具**
+```python
+from math_tools import get_math_tool
+
+calculator = get_math_tool(llm)
+# 可以解決數學問題、執行運算
+```
+
+**3. 資料庫查詢工具**
+```python
+@tool
+def query_database(query: str) -> str:
+    """查詢產品資料庫"""
+    result = db.execute(query)
+    return result
+```
+
+**4. API 調用工具**
+```python
+@tool  
+def get_weather(city: str) -> str:
+    """獲取指定城市的天氣"""
+    response = weather_api.get(city)
+    return response.json()
+```
+
+#### 自定義工具範例
+
+```python
+from langchain.tools import tool
+
+@tool
+def fibonacci(n: int) -> int:
+    """計算斐波那契數列的第 n 項"""
+    if n <= 1:
+        return n
+    return fibonacci(n-1) + fibonacci(n-2)
+
+# 使用
+result = fibonacci.invoke({"n": 10})
+print(result)  # 55
+```
+
+#### 工具的最佳實踐
+
+**1. 清晰的描述**
+```python
+# ❌ 不好的描述
+description = "搜索"
+
+# ✅ 好的描述  
+description = "在網上搜索最新信息。適用於需要即時數據、新聞、天氣等場景。"
+```
+
+**2. 明確的參數**
+```python
+class SearchArgs(BaseModel):
+    query: str = Field(description="要搜索的具體問題或關鍵詞")
+    max_results: int = Field(default=5, description="返回的最大結果數量")
+```
+
+**3. 錯誤處理**
+```python
+@tool
+def safe_divide(a: float, b: float) -> str:
+    """安全除法,處理除零錯誤"""
+    try:
+        return str(a / b)
+    except ZeroDivisionError:
+        return "錯誤: 不能除以零"
+```
+
+### 2. DAG (有向無環圖) - Directed Acyclic Graph
 
 **什麼是圖?**
 想像一張地鐵路線圖,各個站點(節點)之間有路線(邊)連接。
@@ -84,21 +585,239 @@ DAG 示意:
 [任務2] ──┘
 ```
 
-### 2. 並行處理 (Parallel Processing)
+### 3. 並行處理 (Parallel Processing) 深入理解
+
+#### 什麼是並行處理?
+
+**定義**: 同時執行多個獨立的任務,而不是一個接一個地執行。
 
 **日常生活類比**:
-- 單線程(Sequential):洗衣服 → 等待 → 晾衣服 → 等待 → 煮飯
-- 多線程(Parallel):啟動洗衣機的同時開始煮飯,節省時間!
 
-**代碼中的實現**:
+**順序處理 (Sequential)**:
+```
+早上的routine:
+8:00-8:30  煮咖啡 ☕  
+8:30-9:00  洗衣服 👕 (等待)
+9:00-9:30  吃早餐 🍳
+總時間: 1.5 小時
+```
+
+**並行處理 (Parallel)**:
+```
+早上的routine:
+8:00-8:30  煮咖啡 ☕ + 同時啟動洗衣機 👕
+8:30-9:00  吃早餐 🍳 (洗衣機還在運轉)
+總時間: 1 小時 (節省 30 分鐘!)
+```
+
+#### 為什麼並行處理能加速?
+
+**關鍵概念: 等待時間 (Wait Time)**
+
+當你調用 API 或搜索時:
+```
+發送請求 (0.1秒) → 等待服務器處理 (2秒) → 接收結果 (0.1秒)
+```
+
+在等待的 2 秒內,CPU 是空閒的!並行處理就是利用這段時間執行其他任務。
+
+#### Python 中的並行實現
+
+**1. 使用 ThreadPoolExecutor**
+
 ```python
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, wait
 
-# 使用線程池同時執行多個任務
+# 定義要執行的任務
+def search_sf_temp():
+    return tavily_search("San Francisco temperature")
+
+def search_ny_temp():
+    return tavily_search("New York temperature")
+
+# 並行執行
 with ThreadPoolExecutor() as executor:
+    # 提交任務到線程池
     future1 = executor.submit(search_sf_temp)
     future2 = executor.submit(search_ny_temp)
-    # 兩個任務同時進行!
+    
+    # 等待所有任務完成
+    wait([future1, future2])
+    
+    # 獲取結果
+    sf_temp = future1.result()  # "15°C"
+    ny_temp = future2.result()  # "10°C"
+```
+
+**時間對比**:
+```
+順序執行:
+Task1: 2秒 + Task2: 2秒 = 4秒總時間
+
+並行執行:
+Task1: 2秒 }
+Task2: 2秒 } 同時進行 = 2秒總時間
+```
+
+**2. 使用 asyncio (異步方式)**
+
+```python
+import asyncio
+
+async def search_sf_temp():
+    return await async_search("San Francisco temperature")
+
+async def search_ny_temp():
+    return await async_search("New York temperature")
+
+# 並行執行
+async def main():
+    results = await asyncio.gather(
+        search_sf_temp(),
+        search_ny_temp()
+    )
+    sf_temp, ny_temp = results
+
+asyncio.run(main())
+```
+
+#### 並行 vs 並發 vs 順序
+
+**順序 (Sequential)**:
+```
+Task1 ━━━━━━━━►
+             Task2 ━━━━━━━━►
+                          Task3 ━━━━━━━━►
+時間 ════════════════════════════════════►
+```
+
+**並發 (Concurrent)**: 切換執行
+```
+Task1 ━━►  ━━►  ━━►
+    Task2  ━━►  ━━►  ━━►
+       Task3  ━━►  ━━►  ━━►
+時間 ════════════════════════►
+```
+
+**並行 (Parallel)**: 真正同時執行
+```
+Task1 ━━━━━━━━━━━━━━►
+Task2 ━━━━━━━━━━━━━━►
+Task3 ━━━━━━━━━━━━━━►
+時間 ════════════════►
+```
+
+#### 何時使用並行處理?
+
+**✅ 適合並行的場景**:
+1. **I/O 密集型任務** (API 調用、數據庫查詢、文件讀寫)
+   - 大部分時間在等待
+   - 並行可以大幅提升效率
+
+2. **獨立任務**
+   - 任務之間沒有依賴關係
+   - 可以任意順序執行
+
+**❌ 不適合並行的場景**:
+1. **CPU 密集型任務** (複雜計算、圖像處理)
+   - Python 的 GIL (Global Interpreter Lock) 會限制真正的並行
+   - 需要使用 multiprocessing 而不是 threading
+
+2. **有依賴關係的任務**
+   - 任務 B 需要任務 A 的結果
+   - 必須等待 A 完成
+
+#### LLM Compiler 中的並行處理
+
+```python
+def schedule_task(task_unit):
+    """調度和執行單個任務"""
+    task, observations, config = task_unit
+    
+    # 等待依賴滿足
+    while True:
+        deps = task["dependencies"]
+        # 檢查所有依賴是否完成
+        if all(dep in observations for dep in deps):
+            break
+        time.sleep(0.1)  # 短暫等待
+    
+    # 依賴滿足,執行任務
+    result = execute(task, observations, config)
+    return result
+
+# 並行調度所有任務
+with ThreadPoolExecutor() as executor:
+    # 同時提交所有任務
+    futures = [
+        executor.submit(schedule_task, (task, obs, config))
+        for task in tasks
+    ]
+    
+    # 等待所有完成
+    wait(futures)
+```
+
+**實際執行示例**:
+```
+任務列表:
+1. search("SF temp")      # 無依賴
+2. search("NY temp")      # 無依賴  
+3. math("${1} + ${2}")    # 依賴 1, 2
+
+執行時間軸:
+t=0.0s: 任務1開始 ━━━━━━━━━━━━►
+t=0.0s: 任務2開始 ━━━━━━━━━━━━► (並行!)
+t=0.0s: 任務3等待... (依賴未滿足)
+
+t=2.0s: 任務1完成 ✓
+t=2.1s: 任務2完成 ✓
+t=2.1s: 任務3開始 ━━► (依賴滿足)
+t=2.5s: 任務3完成 ✓
+
+總時間: 2.5秒 (vs 順序執行的 6秒)
+```
+
+#### 並行處理的陷阱和注意事項
+
+**1. 競態條件 (Race Condition)**
+```python
+# ❌ 危險: 多個線程修改同一個變量
+counter = 0
+
+def increment():
+    global counter
+    counter += 1
+
+# 可能導致數據不一致
+
+# ✅ 安全: 使用鎖
+from threading import Lock
+
+lock = Lock()
+counter = 0
+
+def safe_increment():
+    with lock:
+        global counter
+        counter += 1
+```
+
+**2. 資源限制**
+```python
+# 限制並發數量,避免API限流
+with ThreadPoolExecutor(max_workers=5) as executor:
+    # 最多同時5個請求
+    futures = [executor.submit(task) for task in tasks]
+```
+
+**3. 錯誤處理**
+```python
+future = executor.submit(risky_task)
+try:
+    result = future.result(timeout=10)  # 10秒超時
+except Exception as e:
+    print(f"任務失敗: {e}")
 ```
 
 ### 3. 依賴管理 (Dependency Management)
